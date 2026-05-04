@@ -1,36 +1,195 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Page Summarizer — Chrome Extension
 
-## Getting Started
+A Chrome Extension (Manifest V3) that extracts content from any webpage, sends it to an AI-powered backend, and displays a clean bullet-point summary — all without exposing any API keys to the client.
 
-First, run the development server:
+> **HNG Stage 4A — Frontend Wizards**
+
+---
+
+## ✨ Features
+
+- **One-click summarization** — Click "Summarize Page" and get a 3-bullet-point AI summary of any webpage
+- **Background service worker** — All API calls are made securely from the background script, never from the popup
+- **Caching** — Summaries are cached per-URL using `chrome.storage.local` to prevent duplicate API calls
+- **Clear/Reset** — One-click button to clear the cached summary and start fresh
+- **Loading states** — Visual feedback while the page content is being read and the AI is generating
+- **Graceful error handling** — Meaningful error messages for rate-limiting (429), server errors, and network failures
+- **CORS support** — Backend handles preflight OPTIONS requests for cross-origin extension calls
+
+---
+
+## 🏗️ Architecture
+
+This project is split into two parts:
+
+```
+┌─────────────────────────────────────────────────┐
+│              Chrome Extension (extension/)       │
+│                                                  │
+│  popup.html/js ──► background.js (service worker)│
+│       ▲                    │                     │
+│       │                    │ fetch POST          │
+│       │                    ▼                     │
+│       │         Vercel (Next.js API)             │
+│       │         /api/summarize                   │
+│       │                    │                     │
+│       │                    │ server-side call     │
+│       │                    ▼                     │
+│       │            Google Gemini API             │
+│       │                    │                     │
+│       └────── summary ◄───┘                     │
+└─────────────────────────────────────────────────┘
+```
+
+### File Structure
+
+```
+hngtask4a/
+├── app/
+│   └── api/
+│       └── summarize/
+│           └── route.ts        # Next.js API route (proxy to Gemini)
+├── extension/
+│   ├── manifest.json           # Manifest V3 configuration
+│   ├── background.js           # Service worker — handles API calls
+│   ├── popup.html              # Extension popup UI
+│   └── popup.js                # Popup logic — content extraction & display
+├── .env.local                  # API key (not committed)
+├── package.json
+└── README.md
+```
+
+### Data Flow
+
+1. **User** clicks "Summarize Page" in the popup
+2. **popup.js** checks `chrome.storage.local` for a cached summary
+3. If no cache, **popup.js** injects a content script to extract `document.body.innerText`
+4. **popup.js** sends the extracted text to **background.js** via `chrome.runtime.sendMessage()`
+5. **background.js** sends a POST request to the Next.js API route on Vercel (`/api/summarize`)
+6. **route.ts** calls the Google Gemini API server-side and returns the summary
+7. The summary flows back through the message channel to the popup and is displayed
+8. The result is cached in `chrome.storage.local` keyed by the page URL
+
+---
+
+## 🤖 AI Integration
+
+### Provider: Google Gemini
+
+- **Model:** `gemini-2.5-flash` — chosen for fast response times and low cost
+- **SDK:** `@google/generative-ai` (npm package)
+- **Prompt:** `"Summarize this text in 3 bullet points: {text}"`
+- **Text limit:** The first 3,000 characters of the page body are sent to avoid exceeding token limits
+
+### How It Works
+
+The Next.js API route (`app/api/summarize/route.ts`) acts as a **secure proxy server**:
+
+```
+Extension → POST /api/summarize → Next.js route.ts → Gemini API → Response
+```
+
+The API key is stored as an environment variable (`GEMINI_API_KEY`) on Vercel and is **never** sent to or accessible from the browser or extension.
+
+---
+
+## 🔐 Security Decisions
+
+| Decision | Rationale |
+|---|---|
+| **API key stored in `.env.local` / Vercel env vars** | The key never leaves the server. It is not committed to Git (`.env*` is in `.gitignore`). |
+| **Next.js API route as proxy** | The extension never calls Gemini directly. All AI requests go through the server-side route, which holds the API key. |
+| **Background service worker makes fetch calls** | The popup never makes external network requests. This follows the principle of least privilege and satisfies the Manifest V3 requirement. |
+| **Minimal Chrome permissions** | Only `activeTab`, `scripting`, and `storage` are requested — the absolute minimum needed. |
+| **CORS headers on the API** | The API route includes `Access-Control-Allow-Origin: *` and handles `OPTIONS` preflight requests to allow the extension to communicate. |
+| **Input truncation** | Page text is truncated to 3,000 characters before sending to the API to prevent abuse and excessive token usage. |
+| **No hardcoded secrets** | No API keys, tokens, or credentials exist anywhere in the committed source code. |
+
+---
+
+## ⚖️ Trade-offs
+
+| Trade-off | Decision | Why |
+|---|---|---|
+| **`document.body.innerText` vs. readability parser** | Used `innerText` for simplicity | A library like Mozilla Readability would extract article content more cleanly, but adds complexity and bundle size. `innerText` works well for most pages. |
+| **3,000 character limit** | Truncate input text | Balances between getting enough context for a meaningful summary and staying within API token limits / cost constraints. |
+| **`Access-Control-Allow-Origin: *`** | Open CORS | For a production app, this should be locked down to the extension's origin. Using `*` simplifies development and testing. |
+| **Server-side proxy vs. background-only** | Used a Vercel-hosted proxy | Adds a network hop but completely hides the API key. The alternative (putting the key in `background.js`) would expose it in the extension source code. |
+| **Caching strategy** | Simple URL-keyed `chrome.storage.local` | Good enough for preventing duplicate calls. A more advanced approach could include TTL-based expiration or content-hash-based cache invalidation. |
+| **Single model** | `gemini-2.5-flash` only | Fastest and cheapest option. Could offer model selection as a user setting in the future. |
+
+---
+
+## 🚀 Setup Instructions
+
+### Prerequisites
+
+- **Node.js** v18+ and npm
+- **Google Chrome** browser
+- A **Google Gemini API key** from [Google AI Studio](https://aistudio.google.com/app/apikey)
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/Amarkin01/HNG-STAGE-4A-TASK.git
+cd HNG-STAGE-4A-TASK
+```
+
+### 2. Install Backend Dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```env
+GEMINI_API_KEY=your_api_key_here
+```
+
+### 4. Run the Backend Locally (for development)
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The API will be available at `http://localhost:3000/api/summarize`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 5. Install the Chrome Extension
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Open Chrome and navigate to `chrome://extensions/`
+2. Enable **Developer mode** (toggle in the top-right corner)
+3. Click **"Load unpacked"**
+4. Select the `extension/` folder from this project
+5. The "AI Page Summarizer" extension icon will appear in your toolbar
 
-## Learn More
+### 6. Using the Extension
 
-To learn more about Next.js, take a look at the following resources:
+1. Navigate to any webpage you want to summarize
+2. Click the extension icon in the Chrome toolbar
+3. Click **"Summarize Page"**
+4. Wait for the AI-generated summary to appear
+5. Use **"Clear Summary"** to remove the cached result
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🌐 Deployment
 
-## Deploy on Vercel
+The Next.js backend is deployed on **Vercel**:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Live URL:** `https://amarkin-stage-4a.vercel.app`
+- **API Endpoint:** `https://amarkin-stage-4a.vercel.app/api/summarize`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The `GEMINI_API_KEY` environment variable is configured in the Vercel project dashboard under **Settings → Environment Variables**.
+
+---
+
+## 📦 Tech Stack
+
+- **Extension:** Manifest V3, Vanilla JavaScript, Chrome APIs
+- **Backend:** Next.js 16 (App Router), TypeScript
+- **AI:** Google Gemini 2.5 Flash via `@google/generative-ai` SDK
+- **Hosting:** Vercel
+- **Storage:** `chrome.storage.local`
