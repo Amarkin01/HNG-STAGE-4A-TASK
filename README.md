@@ -170,9 +170,10 @@ The API will be available at `http://localhost:3000/api/summarize`.
 
 1. Navigate to any webpage you want to summarize
 2. Click the extension icon in the Chrome toolbar
-3. Click **"Summarize Page"**
+3. Click **"Summarize This Page"**
 4. Wait for the AI-generated summary to appear
-5. Use **"Clear Summary"** to remove the cached result
+5. Use **"Clear"** to remove the cached result
+6. Use **"Copy"** to copy the summary to your clipboard
 
 ---
 
