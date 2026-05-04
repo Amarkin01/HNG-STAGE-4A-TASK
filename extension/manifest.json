@@ -1,15 +1,25 @@
 {
     "manifest_version": 3,
     "name": "AI Page Summarizer",
-    "version": "1.0",
-    "description": "Summarize any webpage instantly using AI.",
+    "version": "1.1",
+    "description": "Premium AI-powered page summarization with key insights and reading time.",
     "permissions": [
         "activeTab",
         "scripting",
         "storage"
     ],
     "action": {
-        "default_popup": "popup.html"
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icon.png",
+            "48": "icon.png",
+            "128": "icon.png"
+        }
+    },
+    "icons": {
+        "16": "icon.png",
+        "48": "icon.png",
+        "128": "icon.png"
     },
     "background": {
         "service_worker": "background.js"

@@ -1,77 +1,277 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Page Summarizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            width: 320px;
-            padding: 15px;
-            font-family: 'Segoe UI', sans-serif;
-            background: #f4f7f6;
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --bg: #ffffff;
+            --text: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --surface: #f9fafb;
+            --accent: #eff6ff;
         }
 
-        .container {
+        body {
+            width: 380px;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        .header {
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
             gap: 10px;
         }
 
-        h3 {
-            margin: 0;
-            color: #333;
+        .logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        h1 {
             font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .content {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
         }
 
         button {
-            padding: 10px;
-            background: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            font-weight: bold;
+            transition: all 0.2s;
+            border: 1px solid transparent;
         }
 
-        button:disabled {
-            background: #94a3b8;
+        #summarizeBtn {
+            background-color: var(--primary);
+            color: white;
+            grid-column: span 2;
         }
 
-        #status {
-            font-size: 12px;
-            color: #666;
-            height: 15px;
+        #summarizeBtn:hover {
+            background-color: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
         }
 
-        #summary {
-            margin-top: 10px;
-            padding: 10px;
-            background: white;
-            border-radius: 6px;
-            border: 1px solid #ddd;
+        #summarizeBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #clearBtn {
+            background-color: white;
+            color: #ef4444;
+            border-color: #fecaca;
+        }
+
+        #clearBtn:hover {
+            background-color: #fef2f2;
+        }
+
+        #copyBtn {
+            background-color: white;
+            color: var(--text-muted);
+            border-color: var(--border);
+        }
+
+        #copyBtn:hover {
+            background-color: var(--surface);
+            color: var(--text);
+        }
+
+        .status-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-size: 13px;
-            line-height: 1.5;
-            color: #444;
-            max-height: 250px;
-            overflow-y: auto;
-            white-space: pre-wrap;
+            color: var(--text-muted);
         }
 
-        .loading {
-            font-style: italic;
-            color: #2563eb;
+        .loader {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .output-container {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            min-height: 100px;
+            max-height: 350px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .reading-time {
+            font-weight: 500;
+            color: var(--primary);
+            text-transform: none;
+        }
+
+        .summary-list {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .summary-list li {
+            margin-bottom: 8px;
+        }
+
+        .insights-container {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .insight-tag {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            padding: 40px 0;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
         }
     </style>
 </head>
-
 <body>
-    <div class="container">
-        <h3>AI Summarizer</h3>
-        <button id="summarizeBtn">Summarize Page</button>
-        <button id="clearBtn" style="background: #dc2626;">Clear Summary</button>
-        <div id="status"></div>
-        <div id="summary">Your summary will appear here...</div>
+    <div class="header">
+        <div class="logo-group">
+            <img src="icon.png" alt="Logo" class="logo">
+            <h1>AI Summarizer</h1>
+        </div>
     </div>
+
+    <div class="content">
+        <div class="action-buttons">
+            <button id="summarizeBtn">
+                Summarize This Page
+            </button>
+            <button id="copyBtn" title="Copy Summary">
+                Copy
+            </button>
+            <button id="clearBtn">
+                Clear
+            </button>
+        </div>
+
+        <div class="status-container">
+            <div id="loader" class="loader"></div>
+            <span id="status">Ready to summarize</span>
+        </div>
+
+        <div class="output-container" id="output">
+            <div id="emptyState" class="empty-state">
+                Your AI-powered summary will appear here once generated.
+            </div>
+            
+            <div id="resultArea" style="display: none;">
+                <div class="section-title">
+                    Summary
+                    <span id="readingTime" class="reading-time"></span>
+                </div>
+                <ul id="summaryList" class="summary-list"></ul>
+
+                <div class="insights-container">
+                    <div class="section-title">Key Takeaways</div>
+                    <div id="insightsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="popup.js"></script>
 </body>
-
 </html>

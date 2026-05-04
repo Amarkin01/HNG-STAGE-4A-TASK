@@ -24,14 +24,30 @@ export async function POST(req: Request) {
         }
 
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const prompt = `Summarize this text in 3 bullet points: ${text}`;
+        const prompt = `
+        You are an AI page summarizer. Summarize the following text.
+        
+        Return ONLY a JSON object with this exact structure:
+        {
+          "summary": ["bullet 1", "bullet 2", "bullet 3"],
+          "keyInsights": ["insight 1", "insight 2"],
+          "estimatedReadingTime": "X min read"
+        }
+        
+        Text to summarize:
+        ${text}
+        `;
 
         const result = await model.generateContent(prompt);
-        const response = await result.response;
-
+        const responseText = result.response.text();
+        
+        // Clean up markdown code blocks if the AI includes them
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : responseText;
+        const data = JSON.parse(jsonString);
 
         return NextResponse.json(
-            { summary: response.text() },
+            data,
             { headers: { "Access-Control-Allow-Origin": "*" } }
         );
     } catch (error: any) {

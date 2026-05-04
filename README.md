@@ -8,13 +8,14 @@ A Chrome Extension (Manifest V3) that extracts content from any webpage, sends i
 
 ## ✨ Features
 
-- **One-click summarization** — Click "Summarize Page" and get a 3-bullet-point AI summary of any webpage
-- **Background service worker** — All API calls are made securely from the background script, never from the popup
-- **Caching** — Summaries are cached per-URL using `chrome.storage.local` to prevent duplicate API calls
-- **Clear/Reset** — One-click button to clear the cached summary and start fresh
-- **Loading states** — Visual feedback while the page content is being read and the AI is generating
-- **Graceful error handling** — Meaningful error messages for rate-limiting (429), server errors, and network failures
-- **CORS support** — Backend handles preflight OPTIONS requests for cross-origin extension calls
+- **One-click premium summarization** — Get a structured 3-bullet-point AI summary, key insights, and estimated reading time.
+- **Premium UI/UX** — Modern, glassmorphism-inspired design using the Inter font family.
+- **Intelligent Extraction** — Heuristic-based content extraction that prioritizes article text and filters out navigation/sidebar clutter.
+- **Copy to Clipboard** — Easily copy the formatted summary with a single click.
+- **Background service worker** — All API calls are made securely from the background script to a Next.js proxy, never exposing API keys.
+- **Caching** — Summaries are cached per-URL using `chrome.storage.local` to prevent duplicate API calls.
+- **Loading states** — Visual feedback with a sleek spinner while the AI is thinking.
+- **Graceful error handling** — Meaningful error messages for rate-limiting (429), server errors, and network failures.
 
 ---
 
